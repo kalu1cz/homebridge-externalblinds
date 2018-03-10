@@ -5,10 +5,10 @@ module.exports = function(homebridge) {
     Service = homebridge.hap.Service;
     Characteristic = homebridge.hap.Characteristic;
 
-    homebridge.registerAccessory("homebridge-externalblinds", "ExternalBlinds", LockAccessory);
+    homebridge.registerAccessory("homebridge-externalblinds", "ExternalBlinds", Blinds);
 }
 
-function LockAccessory(log, config) {
+function Blinds(log, config) { 
     this.log = log;
     this.name = config["name"];
     this.url = config["url"];
@@ -27,19 +27,7 @@ function LockAccessory(log, config) {
         .on('get', this.getState.bind(this))
         .on('set', this.setState.bind(this));
 
-    this.battservice = new Service.BatteryService(this.name);
-
-    this.battservice
-        .getCharacteristic(Characteristic.BatteryLevel)
-        .on('get', this.getBattery.bind(this));
-
-    this.battservice
-        .getCharacteristic(Characteristic.ChargingState)
-        .on('get', this.getCharging.bind(this));
-
-    this.battservice
-        .getCharacteristic(Characteristic.StatusLowBattery)
-        .on('get', this.getLowBatt.bind(this));
+   
 
 }
 
@@ -53,7 +41,9 @@ LockAccessory.prototype.getState = function(callback) {
         if (!err && response.statusCode == 200) {
             var json = JSON.parse(body);
             var state = json.state; // "locked" or "unlocked"
-            this.log("Lock state is %s", state);
+            var state1 = json.state1; // "locked" or "unlocked"
+            
+            //this.log("Lock state is %s", state);
             var locked = state == "locked";
             callback(null, locked); // success
         } else {
@@ -65,61 +55,12 @@ LockAccessory.prototype.getState = function(callback) {
     }.bind(this));
 }
 
-LockAccessory.prototype.getBattery = function(callback) {
-    this.log("Getting current battery...");
 
-    request.get({
-        url: this.url,
-        qs: { username: this.username, password: this.password, lockid: this.lockID }
-    }, function(err, response, body) {
-
-        if (!err && response.statusCode == 200) {
-            var json = JSON.parse(body);
-            var batt = json.battery;
-            this.log("Lock battery is %s", batt);
-            callback(null, batt); // success
-        }
-        else {
-            if (response && response.statusCode) {
-                this.log("Error getting battery (status code %s): %s", response.statusCode, err);
-            }
-            callback(err);
-        }
-    }.bind(this));
-}
-
-LockAccessory.prototype.getCharging = function(callback) {
-    callback(null, Characteristic.ChargingState.NOT_CHARGING);
-}
-
-LockAccessory.prototype.getLowBatt = function(callback) {
-    this.log("Getting current battery...");
-
-    request.get({
-        url: this.url,
-        qs: { username: this.username, password: this.password, lockid: this.lockID }
-    }, function(err, response, body) {
-
-        if (!err && response.statusCode == 200) {
-            var json = JSON.parse(body);
-            var batt = json.battery;
-            this.log("Lock battery is %s", batt);
-            var low = (batt > 20) ? Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL : Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW;
-            callback(null, low); // success
-        }
-        else {
-            if (response && response.statusCode) {
-                this.log("Error getting battery (status code %s): %s", response.statusCode, err);
-            }
-            callback(err);
-        }
-    }.bind(this));
-}
 
 LockAccessory.prototype.setState = function(state, callback) {
     var lockState = (state == Characteristic.LockTargetState.SECURED) ? "locked" : "unlocked";
 
-    this.log("Set state to %s", lockState);
+    //this.log("Set state to %s", lockState);
 
     request.post({
         url: this.url,
